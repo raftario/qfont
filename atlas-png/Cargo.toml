@@ -1,0 +1,8 @@
+[package]
+name = "fontatlas-png"
+version = "0.1.0"
+edition = "2018"
+
+[dependencies]
+fontatlas = { path = "../atlas" }
+image = { version = "0.23", features = ["png"], default-features = false }

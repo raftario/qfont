@@ -1,0 +1,2 @@
+[workspace]
+members = ["atlas", "atlas-png", "unity"]

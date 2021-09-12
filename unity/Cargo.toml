@@ -1,0 +1,11 @@
+[package]
+name = "fontunity"
+version = "0.1.0"
+edition = "2018"
+
+[dependencies]
+fontatlas = { path = "../atlas" }
+libil2cpp = { git = "https://github.com/StackDoubleFlow/quest-hook-rs", features = [
+    "unity2019",
+    "cache",
+] }
