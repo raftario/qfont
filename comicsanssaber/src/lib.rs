@@ -2,17 +2,14 @@
 
 mod tmp;
 
+use fontunity::TMPFontAsset;
 use quest_hook::hook;
 
-use crate::tmp::{TMPFontAsset, TMPText};
+use crate::tmp::TMPText;
 
 static DATA: &[u8] = include_bytes!("../font.ttf");
 thread_local! {
-    static FONT: *mut TMPFontAsset = {
-        let atlas = fontatlas::atlas(DATA, 64.0);
-        let font = fontunity::from_atlas(atlas);
-        TMPFontAsset::new(font)
-    };
+    static FONT: *mut TMPFontAsset = fontunity::from_atlas(fontatlas::atlas(DATA, 64.0));
 }
 
 #[hook("TMPro", "TextMeshPro", "GenerateTextMesh")]

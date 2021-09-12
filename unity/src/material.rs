@@ -1,4 +1,4 @@
-use libil2cpp::{unsafe_impl_reference_type, Il2CppObject, ObjectExt};
+use libil2cpp::{unsafe_impl_reference_type, Il2CppObject, Il2CppString, ObjectExt};
 use std::ops::{Deref, DerefMut};
 
 use crate::{texture_2d::Texture2D, Shader};
@@ -17,6 +17,11 @@ impl Material {
 
     pub fn set_main_texture(&mut self, texture: &mut Texture2D) {
         self.invoke("set_mainTexture", texture).unwrap()
+    }
+
+    pub fn set_float(&mut self, name: &str, value: f32) {
+        self.invoke("SetFloat", (Il2CppString::new(name), value))
+            .unwrap()
     }
 }
 

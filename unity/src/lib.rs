@@ -1,54 +1,59 @@
 #![feature(generic_associated_types, once_cell)]
 
-mod character_info;
-mod font;
-mod font_style;
+mod atlas_population_mode;
+mod glyph;
+mod glyph_metrics;
+mod glyph_rect;
+mod glyph_render_mode;
+mod list;
 mod material;
-mod rect;
+mod scriptable_object;
 mod shader;
+mod shader_utilities;
 mod texture_2d;
 mod texture_format;
+mod tmp_fontasset;
 
 use fontatlas::Atlas;
-use libil2cpp::{Il2CppArray, WrapRaw};
-use std::mem::{size_of, transmute};
+use libil2cpp::Il2CppArray;
 use tracing::debug;
 
-pub use crate::font::Font;
+pub use crate::tmp_fontasset::TMPFontAsset;
 use crate::{
-    character_info::CharacterInfo, font_style::FontStyle, material::Material, rect::Rect,
-    shader::Shader, texture_2d::Texture2D, texture_format::TextureFormat,
+    atlas_population_mode::AtlasPopulationMode, glyph::Glyph, glyph_metrics::GlyphMetrics,
+    glyph_rect::GlyphRect, glyph_render_mode::GlyphRenderMode, list::List, material::Material,
+    scriptable_object::ScriptableObject, shader::Shader, texture_2d::Texture2D,
+    texture_format::TextureFormat,
 };
 
 #[tracing::instrument(level = "debug", skip(atlas))]
-pub fn from_atlas(atlas: Atlas) -> &'static mut Font {
+pub fn from_atlas(atlas: Atlas) -> &'static mut TMPFontAsset {
     let Atlas {
         width,
         height,
         glyphs,
+        glyph_padding,
+        ..
     } = atlas;
 
-    debug!("creating a {}x{} texture", width, height);
+    debug!("instanciating TMP_FontAsset");
+    let font_asset = ScriptableObject::create_instance::<TMPFontAsset>();
+    font_asset.set_version("1.1.0");
+    font_asset.set_atlas_population_mode(AtlasPopulationMode::Static);
+    font_asset.set_atlas_width(width as i32);
+    font_asset.set_atlas_height(height as i32);
+    font_asset.set_atlas_padding(glyph_padding as i32);
+    font_asset.set_atlas_render_mode(GlyphRenderMode::Smooth);
+
+    debug!("creating {}x{} texture", width, height);
     let texture = Texture2D::new(width as i32, height as i32, TextureFormat::Alpha8);
     let texture_data = texture.raw_texture_data();
 
-    let uv_x_factor = 1.0 / width as f32;
-    let uv_y_factor = 1.0 / height as f32;
+    debug!("creating glyph table");
+    let glyph_table = List::<Glyph>::new(glyphs.len() as i32);
 
-    let spoofed_array =
-        Il2CppArray::<u8>::new(zero_iter(size_of::<CharacterInfo>() * glyphs.len()));
-    let character_info = unsafe {
-        let raw = spoofed_array.raw_mut();
-        if !raw.bounds.is_null() {
-            (*raw.bounds).length /= size_of::<CharacterInfo>();
-        }
-        raw.max_length /= size_of::<CharacterInfo>();
-
-        transmute::<&mut Il2CppArray<u8>, &mut Il2CppArray<CharacterInfo>>(spoofed_array)
-    };
-
-    debug!("copying atlas to texture and extracting character info");
-    for (i, glyph) in glyphs.into_iter().enumerate() {
+    debug!("writing atlas to texture and glyphs to table");
+    for glyph in glyphs {
         for (i, a) in glyph.bitmap.iter().copied().enumerate() {
             let x = i % glyph.width;
             let y = i / glyph.width;
@@ -57,70 +62,41 @@ pub fn from_atlas(atlas: Atlas) -> &'static mut Font {
             texture_data.as_mut_slice()[texture_idx] = a;
         }
 
-        let index = glyph.codepoint as i32;
-        let uv = Rect {
-            x: glyph.x as f32 * uv_x_factor,
-            y: glyph.y as f32 * uv_y_factor,
-            width: glyph.width as f32 * uv_x_factor,
-            height: glyph.height as f32 * uv_y_factor,
-        };
-        let vert = Rect {
-            x: 0.0,
-            y: 0.0,
+        let index = glyph.codepoint as u32;
+        let metrics = GlyphMetrics {
             width: glyph.width as f32,
-            height: -(glyph.height as f32),
+            height: glyph.height as f32,
+            bearing_x: glyph.bearing_x as f32,
+            bearing_y: glyph.bearing_y as f32,
+            advance: glyph.advance as f32,
         };
-        let width = glyph.advance as f32;
+        let glyph_rect = GlyphRect {
+            x: glyph.x as i32,
+            y: glyph.y as i32,
+            width: glyph.width as i32,
+            height: glyph.height as i32,
+        };
 
-        character_info.as_mut_slice()[i] = CharacterInfo {
-            index,
-            uv,
-            vert,
-            width,
-            style: FontStyle::Normal,
-            flipped: false,
-        };
+        let glyph = Glyph::new(index, metrics, glyph_rect);
+        glyph_table.add(glyph);
     }
     texture.load_raw_texture_data(texture_data);
     texture.apply();
 
+    let texture = texture as *mut Texture2D;
+
+    font_asset.set_atlas_textures(Il2CppArray::new([Some(unsafe { &mut *texture })]));
+    font_asset.set_glyph_table(glyph_table);
+
     debug!("creating material");
-    let shader = Shader::find("GUI/Text Shader").unwrap();
-    let material = Material::new(shader);
-    material.set_main_texture(texture);
+    let material = Material::new(shader_utilities::shader_ref_mobile_bitmap());
+    material.set_main_texture(unsafe { &mut *texture });
+    material.set_float("_TextureWidth", width as f32);
+    material.set_float("_TextureHeight", height as f32);
+    font_asset.set_material(material);
 
-    debug!("creating font");
-    let font = Font::new();
-    font.set_material(material);
-    font.set_character_info(character_info);
+    debug!("initialising TMP_FontAsset");
+    font_asset.read_definition();
 
-    font
-}
-
-fn zero_iter(n: usize) -> impl ExactSizeIterator<Item = u8> {
-    struct Iter {
-        n: usize,
-        max: usize,
-    }
-
-    impl Iterator for Iter {
-        type Item = u8;
-
-        fn next(&mut self) -> Option<Self::Item> {
-            if self.n >= self.max {
-                return None;
-            }
-
-            self.n += 1;
-            Some(0)
-        }
-
-        fn size_hint(&self) -> (usize, Option<usize>) {
-            (self.max - self.n, Some(self.max - self.n))
-        }
-    }
-
-    impl ExactSizeIterator for Iter {}
-
-    Iter { n: 0, max: n }
+    font_asset
 }
