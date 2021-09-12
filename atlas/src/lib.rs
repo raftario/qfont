@@ -1,5 +1,6 @@
 use fontdue::{Font, FontSettings};
 use std::{cmp, collections::BTreeSet};
+use tracing::debug;
 use ttf_parser::Face;
 
 #[derive(Debug)]
@@ -44,6 +45,7 @@ impl Ord for GlyphAndOffset {
     }
 }
 
+#[tracing::instrument(level = "debug", skip(data))]
 pub fn atlas(data: &[u8], size: f32) -> Atlas {
     let face = Face::from_slice(data, 0).unwrap();
     let font = Font::from_bytes(
@@ -54,6 +56,8 @@ pub fn atlas(data: &[u8], size: f32) -> Atlas {
         },
     )
     .unwrap();
+
+    debug!("calculating metrics");
 
     let horizontal_metrics = font.horizontal_line_metrics(size).unwrap();
     let estimated_ascent = horizontal_metrics.ascent.ceil() as i32;
@@ -66,6 +70,7 @@ pub fn atlas(data: &[u8], size: f32) -> Atlas {
     let mut y_bump = 0;
     let mut yoffset_bump = 0;
 
+    debug!("rasterizing glyphs");
     for subtable in face.character_mapping_subtables() {
         subtable.codepoints(|c| {
             if subtable.glyph_index(c).is_none() {
@@ -118,6 +123,7 @@ pub fn atlas(data: &[u8], size: f32) -> Atlas {
     let mut x = 0;
     let mut y = 0;
 
+    debug!("positioning glyphs");
     for GlyphAndOffset(mut glyph, yoffset) in glyph_set {
         if x + glyph.width > atlas_width {
             x = 0;
@@ -132,6 +138,7 @@ pub fn atlas(data: &[u8], size: f32) -> Atlas {
         glyphs.push(glyph);
     }
 
+    debug!("generated a font atlas with {} glyphs", glyphs.len());
     Atlas {
         width: atlas_width,
         height: y + height,

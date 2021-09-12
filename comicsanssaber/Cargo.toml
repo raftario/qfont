@@ -1,0 +1,19 @@
+[package]
+name = "comicsanssaber"
+version = "0.1.0"
+edition = "2021"
+
+[package.metadata.ndk]
+targets = ["arm64-v8a"]
+platform = 24
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+fontatlas = { path = "../atlas" }
+fontunity = { path = "../unity" }
+quest_hook = { git = "https://github.com/StackDoubleFlow/quest-hook-rs", features = [
+    "unity2019",
+] }
+tracing = "0.1"

@@ -1,6 +1,7 @@
 use libil2cpp::unsafe_impl_value_type;
 
 #[repr(C)]
+#[derive(Debug)]
 pub struct Rect {
     pub x: f32,
     pub y: f32,

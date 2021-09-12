@@ -3,6 +3,7 @@ use libil2cpp::unsafe_impl_value_type;
 use crate::{FontStyle, Rect};
 
 #[repr(C)]
+#[derive(Debug)]
 pub struct CharacterInfo {
     pub index: i32,
     pub uv: Rect,

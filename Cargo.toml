@@ -1,2 +1,2 @@
 [workspace]
-members = ["atlas", "atlas-png", "unity"]
+members = ["atlas", "atlas-png", "comicsanssaber", "unity"]

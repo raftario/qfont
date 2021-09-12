@@ -5,6 +5,7 @@ edition = "2018"
 
 [dependencies]
 fontatlas = { path = "../atlas" }
+tracing = "0.1"
 libil2cpp = { git = "https://github.com/StackDoubleFlow/quest-hook-rs", features = [
     "unity2019",
     "cache",

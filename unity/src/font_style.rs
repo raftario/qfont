@@ -1,6 +1,7 @@
 use libil2cpp::unsafe_impl_value_type;
 
 #[repr(i32)]
+#[derive(Debug)]
 pub enum FontStyle {
     Normal = 0,
     Bold = 1,

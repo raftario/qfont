@@ -1,4 +1,4 @@
-use libil2cpp::{unsafe_impl_reference_type, Il2CppObject, Type};
+use libil2cpp::{unsafe_impl_reference_type, Il2CppObject, ObjectExt};
 use std::ops::{Deref, DerefMut};
 
 use crate::{texture_2d::Texture2D, Shader};
@@ -12,7 +12,7 @@ unsafe_impl_reference_type!(in libil2cpp for Material => UnityEngine.Material);
 
 impl Material {
     pub fn new(shader: &mut Shader) -> &'static mut Self {
-        Self::class().invoke(".ctor", shader).unwrap()
+        <Self as ObjectExt>::new(shader)
     }
 
     pub fn set_main_texture(&mut self, texture: &mut Texture2D) {

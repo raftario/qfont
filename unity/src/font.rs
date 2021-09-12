@@ -1,4 +1,4 @@
-use libil2cpp::{unsafe_impl_reference_type, Il2CppArray, Il2CppObject, Type};
+use libil2cpp::{unsafe_impl_reference_type, Il2CppArray, Il2CppObject, ObjectExt};
 use std::{
     lazy::SyncOnceCell,
     mem::transmute,
@@ -16,7 +16,7 @@ unsafe_impl_reference_type!(in libil2cpp for Font => UnityEngine.Font);
 
 impl Font {
     pub fn new() -> &'static mut Self {
-        Self::class().invoke(".ctor", ()).unwrap()
+        <Self as ObjectExt>::new(())
     }
 
     pub fn set_character_info(&mut self, info: &mut Il2CppArray<CharacterInfo>) {
