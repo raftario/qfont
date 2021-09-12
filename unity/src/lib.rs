@@ -42,7 +42,7 @@ pub fn from_atlas(atlas: Atlas) -> &'static mut Font {
             let x = i % glyph.width;
             let y = i / glyph.width;
 
-            let texture_idx = x + y * width;
+            let texture_idx = (x + glyph.x) + (y + glyph.y) * width;
             texture_data[texture_idx] = a;
         }
 
